@@ -4,6 +4,8 @@
   vars:
      lfsmount: /mnt/lfs
      lfsdisk: /dev/sdb
+     lfsuser: lfs
+     lfsgroup: lfs
      lfspass: $1$gfaXySZ/$1CWAjSfP9UnpzfTCsov9l/
      acl_pkg: http://download.savannah.gnu.org/releases/acl/acl-2.2.52.src.tar.gz
      attr_pkg: http://download.savannah.gnu.org/releases/attr/attr-2.4.47.src.tar.gz
@@ -89,39 +91,141 @@
 #      filesystem: fstype=ext4 dev={{ lfsdisk }} opts="-cc"
 #       command: /usr/sbin/mkfs.ext4 {{ lfsdisk }}
 
+    - name: Adding the LFS group
+      group: name={{ lfsgroup }} state=present
+
+    - name: Adding the LFS user
+      user: name={{ lfsuser }} group={{ lfsgroup }} shell=/bin/bash createhome=yes state=present password={{ lfspass }}
+
     - name: create mount point
-      command: /usr/bin/mkdir -p {{ lfsmount  }} 
-       
+      file: path={{ lfsmount }} state=directory recurse=yes 
 
     - name: Mount the partition
       mount: name={{ lfsmount }} src={{ lfsdisk }} fstype=ext4 state=present
   
     - name: Create the tool's directory
-      command: /usr/bin/mkdir -p {{ lfsmount }}/tools/
+      file: path={{ lfsmount }}/tools/ state=directory recurse=yes owner={{ lfsuser }} group={{ lfsgroup }} 
 
     - name: Create the sources's directory
-      command: /usr/bin/mkdir -p {{ lfsmount }}/sources/
+      file: path={{ lfsmount }}/sources/ state=directory recurse=yes owner={{ lfsuser }} group={{ lfsgroup }}
 
     - name: Create /tools system on the host system
-#      command: /usr/bin/ln -sv {{ lfsmount }}/tools /
       file: src={{ lfsmount }}/tools dest=/tools state=link
 
-    - name: Adding the LFS group
-      group: name=lfs state=present
+    - name: Setup working environment
+      sudo: yes
+      sudo_user: "{{ lfsuser }}"
+      file: src=files/.bash_profile dest=~/.bash_profile  # owner={{ lfsuser }} group={{ lfsgroup }}
 
-    - name: Adding the LFS user
-      user: name=lfs group=lfs shell=/bin/bash createhome=yes state=present password={{ lfspass }}
+    - name: Setup working environment
+      sudo: yes
+      sudo_user: "{{ lfsuser }}"
+      file: src=files/.bashrc dest=~/.bashrc  # owner={{ lfsuser }} group={{ lfsgroup }}
 
-    - name: Grant LFS full access to tolls directory    
-      command: chown -v lfs {{ lfsmount }}/tools
+    # Sources
 
-    - name: Grant LFS user full access to sources directory
-      command: chown -v lfs {{ lfsmount }}/sources
-
-#    - name: sudo task
-#      sudo: yes
-#      sudo_user: lfs
-#      module: arguments
-
-
+    - name: Download packages
+      get_url: url={{ item }} dest={{ lfsmount }}/sources/ mode=0440  
+#      debug:
+#       - msg: "{{ item }}"
+      with_items:
+       - "{{ acl_pkg }}"
+       - "{{ attr_pkg }}" #http://download.savannah.gnu.org/releases/attr/attr-2.4.47.src.tar.gz
+       - "{{ autoconf_pkg }}" # http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.xz
+       - "{{  bash_pkg }}" # http://ftp.gnu.org/gnu/bash/bash-4.3.30.tar.gz
+       - "{{ bc_pkg }}"  # http://alpha.gnu.org/gnu/bc/bc-1.06.95.tar.bz2
+       - "{{ binutils_pkg }}" # http://ftp.gnu.org/gnu/binutils/binutils-2.25.1.tar.bz2
+       - "{{ bison_pkg }}" # http://ftp.gnu.org/gnu/bison/bison-3.0.4.tar.xz
+       - "{{ bzip2_pkg }}" # http://www.bzip.org/1.0.6/bzip2-1.0.6.tar.gz
+       - "{{ check_pkg }}" # http://sourceforge.net/projects/check/files/check/0.10.0/check-0.10.0.tar.gz
+       - "{{ coreutils_pkg }}" # http://ftp.gnu.org/gnu/coreutils/coreutils-8.24.tar.xz
+       - "{{ dejagnu_pkg }}" # http://ftp.gnu.org/gnu/dejagnu/dejagnu-1.5.3.tar.gz
+       - "{{ diffutils_pkg }}" # http://ftp.gnu.org/gnu/diffutils/diffutils-3.3.tar.xz
+       - "{{ eudev_pkg }}" # http://dev.gentoo.org/~blueness/eudev/eudev-3.1.2.tar.gz
+       - "{{ e2fsprogs_pkg }}" # http://downloads.sourceforge.net/project/e2fsprogs/e2fsprogs/v1.42.13/e2fsprogs-1.42.13.tar.gz
+       - "{{ expat_pkg }}" #http://prdownloads.sourceforge.net/expat/expat-2.1.0.tar.gz
+       - "{{ expect_pkg }}" # http://prdownloads.sourceforge.net/expect/expect5.45.tar.gz
+       - "{{ file_pkg }}" # ftp://ftp.astron.com/pub/file/file-5.24.tar.gz
+       - "{{ findutils_pkg }}" # http://ftp.gnu.org/gnu/findutils/findutils-4.4.2.tar.gz
+       - "{{ flex_pkg }}" # http://prdownloads.sourceforge.net/flex/flex-2.5.39.tar.xz
+       - "{{ gawk_pkg }}" # http://ftp.gnu.org/gnu/gawk/gawk-4.1.3.tar.xz
+       - "{{ gcc_pkg }}" # http://ftp.gnu.org/gnu/gcc/gcc-5.2.0/gcc-5.2.0.tar.bz2
+       - "{{ gdbm_pkg }}" # http://ftp.gnu.org/gnu/gdbm/gdbm-1.11.tar.gz
+       - "{{ gettext_pkg }}" # http://ftp.gnu.org/gnu/gettext/gettext-0.19.5.1.tar.xz
+       - "{{ glibc_pkg }}" # http://ftp.gnu.org/gnu/glibc/glibc-2.22.tar.xz
+       - "{{ gmp_pkg }}" # http://ftp.gnu.org/gnu//gmp/gmp-6.0.0a.tar.xz
+       - "{{ gpref_pkg }}" # http://ftp.gnu.org/gnu/gperf/gperf-3.0.4.tar.gz
+       - "{{ groff_pkg }}" # http://ftp.gnu.org/gnu/groff/groff-1.22.3.tar.gz
+       - "{{ grub_pkg }}" # http://alpha.gnu.org/gnu/grub/grub-2.02~beta2.tar.xz
+       - "{{ gzip_pkg }}" # http://ftp.gnu.org/gnu/gzip/gzip-1.6.tar.xz
+       - "{{ ianaetc_pkg }}" # http://anduin.linuxfromscratch.org/sources/LFS/lfs-packages/conglomeration/iana-etc/iana-etc-2.30.tar.bz2
+       - "{{ inetutils_pkg }}" # http://ftp.gnu.org/gnu/inetutils/inetutils-1.9.4.tar.xz
+       - "{{ intltool_pkg }}" # http://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz
+       - "{{ iproute2_pkg }}" # https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-4.2.0.tar.xz
+       - "{{ kdb_pkg }}" # https://www.kernel.org/pub/linux/utils/kbd/kbd-2.0.3.tar.xz
+       - "{{ less_pkg }}" # http://www.greenwoodsoftware.com/less/less-458.tar.gz
+       - "{{ lfsbootscripts_pkg }}" # http://www.linuxfromscratch.org/lfs/downloads/7.8/lfs-bootscripts-20150222.tar.bz2
+       - "{{ libcap_pkg }}" # https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.24.tar.xz
+       - "{{ libpipeline_pkg }}" # http://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.4.1.tar.gz
+       - "{{ libtool_pkg }}" # http://ftp.gnu.org/gnu/libtool/libtool-2.4.6.tar.xz
+       - "{{ linux_pkg }}" # https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.2.tar.xz
+       - "{{ m4_pkg }}" # http://ftp.gnu.org/gnu/m4/m4-1.4.17.tar.xz
+       - "{{ make_pkg }}" # http://ftp.gnu.org/gnu/make/make-4.1.tar.bz2
+       - "{{ manpages_pkg }}" # https://www.kernel.org/pub/linux/docs/man-pages/man-pages-4.02.tar.xz
+       - "{{ mpc_pkg }}" # http://www.multiprecision.org/mpc/download/mpc-1.0.3.tar.gz
+       - "{{ mpfr_pkg }}" # http://www.mpfr.org/mpfr-3.1.3/mpfr-3.1.3.tar.xz
+       - "{{ ncurses_pkg }}" # http://ftp.gnu.org/gnu//ncurses/ncurses-6.0.tar.gz
+       - "{{ patch_pkg }}" # http://ftp.gnu.org/gnu/patch/patch-2.7.5.tar.xz
+       - "{{ perl_pkg }}" # http://www.cpan.org/src/5.0/perl-5.22.0.tar.bz2
+       - "{{ pkgconfig_pkg }}" # http://pkgconfig.freedesktop.org/releases/pkg-config-0.28.tar.gz
+       - "{{ procps_pkg }}" # http://sourceforge.net/projects/procps-ng/files/Production/procps-ng-3.3.11.tar.xz
+       - "{{ psmisc_pkg }}" # http://downloads.sourceforge.net/project/psmisc/psmisc/psmisc-22.21.tar.gz
+       - "{{ readline_pkg }}" # http://ftp.gnu.org/gnu/readline/readline-6.3.tar.gz
+       - "{{ ianaetc_pkg }}" # http://anduin.linuxfromscratch.org/sources/LFS/lfs-packages/conglomeration/iana-etc/iana-etc-2.30.tar.bz2
+       - "{{ inetutils_pkg }}" # http://ftp.gnu.org/gnu/inetutils/inetutils-1.9.4.tar.xz
+       - "{{ intltool_pkg }}" # http://launchpad.net/intltool/trunk/0.51.0/+download/intltool-0.51.0.tar.gz
+       - "{{ iproute2_pkg }}" # https://www.kernel.org/pub/linux/utils/net/iproute2/iproute2-4.2.0.tar.xz
+       - "{{ kdb_pkg }}" # https://www.kernel.org/pub/linux/utils/kbd/kbd-2.0.3.tar.xz
+       - "{{ less_pkg }}" # http://www.greenwoodsoftware.com/less/less-458.tar.gz
+       - "{{ lfsbootscripts_pkg }}" # http://www.linuxfromscratch.org/lfs/downloads/7.8/lfs-bootscripts-20150222.tar.bz2
+       - "{{ libcap_pkg }}" # https://www.kernel.org/pub/linux/libs/security/linux-privs/libcap2/libcap-2.24.tar.xz
+       - "{{ libpipeline_pkg }}" # http://download.savannah.gnu.org/releases/libpipeline/libpipeline-1.4.1.tar.gz
+       - "{{ libtool_pkg }}" # http://ftp.gnu.org/gnu/libtool/libtool-2.4.6.tar.xz
+       - "{{ linux_pkg }}" # https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.2.tar.xz
+       - "{{ m4_pkg }}" # http://ftp.gnu.org/gnu/m4/m4-1.4.17.tar.xz
+       - "{{ make_pkg }}" # http://ftp.gnu.org/gnu/make/make-4.1.tar.bz2
+       - "{{ manpages_pkg }}" # https://www.kernel.org/pub/linux/docs/man-pages/man-pages-4.02.tar.xz
+       - "{{ mpc_pkg }}" # http://www.multiprecision.org/mpc/download/mpc-1.0.3.tar.gz
+       - "{{ mpfr_pkg }}" # http://www.mpfr.org/mpfr-3.1.3/mpfr-3.1.3.tar.xz
+       - "{{ ncurses_pkg }}" # http://ftp.gnu.org/gnu//ncurses/ncurses-6.0.tar.gz
+       - "{{ patch_pkg }}" # http://ftp.gnu.org/gnu/patch/patch-2.7.5.tar.xz
+       - "{{ perl_pkg }}" # http://www.cpan.org/src/5.0/perl-5.22.0.tar.bz2
+       - "{{ pkgconfig_pkg }}" # http://pkgconfig.freedesktop.org/releases/pkg-config-0.28.tar.gz
+       - "{{ procps_pkg }}" # http://sourceforge.net/projects/procps-ng/files/Production/procps-ng-3.3.11.tar.xz
+       - "{{ psmisc_pkg }}" # http://downloads.sourceforge.net/project/psmisc/psmisc/psmisc-22.21.tar.gz
+       - "{{ readline_pkg }}" # http://ftp.gnu.org/gnu/readline/readline-6.3.tar.gz
+       - "{{ sed_pkg }}" # http://ftp.gnu.org/gnu/sed/sed-4.2.2.tar.bz2
+       - "{{ shadow_pkg }}" # http://pkg-shadow.alioth.debian.org/releases/shadow-4.2.1.tar.xz
+       - "{{ sysklogd_pkg }}" # http://www.infodrom.org/projects/sysklogd/download/sysklogd-1.5.1.tar.gz
+       - "{{ sysvinit_pkg }}" # http://download.savannah.gnu.org/releases/sysvinit/sysvinit-2.88dsf.tar.bz2
+       - "{{ tar_pkg }}" # http://ftp.gnu.org/gnu/tar/tar-1.28.tar.xz
+       - "{{ tcl_pkg }}" # http://sourceforge.net/projects/tcl/files/Tcl/8.6.4/tcl-core8.6.4-src.tar.gz
+       - "{{ textinfo_pkg }}" # http://ftp.gnu.org/gnu/texinfo/texinfo-6.0.tar.xz
+       - "{{ timezonedata_pkg }}" # http://www.iana.org/time-zones/repository/releases/tzdata2015f.tar.gz
+       - "{{ udevlfs_pkg }}" # http://anduin.linuxfromscratch.org/sources/other/udev-lfs-20140408.tar.bz2
+       - "{{ utillinux_pkg }}" # https://www.kernel.org/pub/linux/utils/util-linux/v2.27/util-linux-2.27.tar.xz
+       - "{{ vim_pkg }}" # ftp://ftp.vim.org/pub/vim/unix/vim-7.4.tar.bz2
+       - "{{ xmlparser_pkg }}" # http://cpan.metacpan.org/authors/id/T/TO/TODDR/XML-Parser-2.44.tar.gz
+       - "{{ xzutils_pkg }}" # http://tukaani.org/xz/xz-5.2.1.tar.xz
+       - "{{ zlib_pkg }}" # http://www.zlib.net/zlib-1.2.8.tar.xz
+       - "{{ bash_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/bash-4.3.30-upstream_fixes-2.patch
+       - "{{ bc_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/bc-1.06.95-memory_leak-1.patch
+       - "{{ bzip2_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/bzip2-1.0.6-install_docs-1.patch
+       - "{{ coreutils_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/coreutils-8.24-i18n-1.patch
+       - "{{ glibcfhs_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/glibc-2.22-fhs-1.patch
+       - "{{ glibci386_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/glibc-2.22-upstream_i386_fix-1.patch
+       - "{{ kbd_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/kbd-2.0.3-backspace-1.patch
+       - "{{ mpfr_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/mpfr-3.1.3-upstream_fixes-1.patch
+       - "{{ readline_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/readline-6.3-upstream_fixes-3.patch
+       - "{{ sysvinit_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/sysvinit-2.88dsf-consolidated-1.patch
 
