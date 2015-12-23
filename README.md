@@ -1,3 +1,5 @@
-Linux from scratch : http://www.linuxfromscratch.org/
-Built with asnible: http://www.ansible.com/
+# Linux from scratch built with ansible
+
+ - [Linux from scratch](http://www.linuxfromscratch.org/)
+ - [Asnible](http://www.ansible.com/)
 
