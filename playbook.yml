@@ -116,14 +116,14 @@
       file: src={{ lfsmount }}/tools dest=/tools state=link
 
     - name: Setup working environment
-      sudo: yes
-      sudo_user: "{{ lfsuser }}"
-      file: src=files/.bash_profile dest=~/.bash_profile  # owner={{ lfsuser }} group={{ lfsgroup }}
+#      sudo: yes
+#      sudo_user: "{{ lfsuser }}"
+      copy: src=files/.bash_profile dest=~/.bash_profile owner={{ lfsuser }} group={{ lfsgroup }}
 
     - name: Setup working environment
-      sudo: yes
-      sudo_user: "{{ lfsuser }}"
-      file: src=files/.bashrc dest=~/.bashrc  # owner={{ lfsuser }} group={{ lfsgroup }}
+#      sudo: yes
+#      sudo_user: "{{ lfsuser }}"
+      copy: src=files/.bashrc dest=~/.bashrc owner={{ lfsuser }} group={{ lfsgroup }}
 
     - name: Install bison on the host machine
       yum: name=bison state=latest
@@ -252,4 +252,22 @@
       command: "{{ lfsmount }}/customscripts/unarchive-tarballs.sh"
       tags:
         - unzip
+
+
+##### BUILD PHASE
+
+# - name: Build CURL with openssl
+#   shell: "{{ item }}"
+#     args:
+#         chdir: "{{ curl_dir }}"
+#     with_items:
+#       - ./buildconf
+#       - ./configure --with-gssapi --with-libidn --with-libssh2 --prefix=/usr --without-nss
+#       - make
+#       - make install
+#       - ldconfig
+
+
+
+
 
