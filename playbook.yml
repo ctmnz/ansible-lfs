@@ -109,6 +109,9 @@
     - name: Create the sources's directory
       file: path={{ lfsmount }}/sources/ state=directory recurse=yes owner={{ lfsuser }} group={{ lfsgroup }}
 
+    - name: Create the customscripts direcotry
+      file: path={{ lfsmount }}/customscripts/ state=directory recurse=yes owner={{ lfsuser }} group={{ lfsgroup }}
+
     - name: Create /tools system on the host system
       file: src={{ lfsmount }}/tools dest=/tools state=link
 
@@ -122,10 +125,13 @@
       sudo_user: "{{ lfsuser }}"
       file: src=files/.bashrc dest=~/.bashrc  # owner={{ lfsuser }} group={{ lfsgroup }}
 
+    - name: Install bison on the host machine
+      yum: name=bison state=latest
+
     # Sources
 
     - name: Download packages
-      get_url: url={{ item }} dest={{ lfsmount }}/sources/ mode=0440  
+      get_url: url={{ item }} dest={{ lfsmount }}/sources/ mode=0440 owner={{ lfsuser }} group={{ lfsgroup }}
 #      debug:
 #       - msg: "{{ item }}"
       with_items:
@@ -228,4 +234,22 @@
        - "{{ mpfr_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/mpfr-3.1.3-upstream_fixes-1.patch
        - "{{ readline_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/readline-6.3-upstream_fixes-3.patch
        - "{{ sysvinit_patch }}" # http://www.linuxfromscratch.org/patches/lfs/7.8/sysvinit-2.88dsf-consolidated-1.patch
+
+ 
+#    - name: debug path_targz
+#      debug: msg="{{ path_targz.stdout_lines }}"
+#      tags:
+#        - unzip
+
+    - name: Add bash file to unarchive all tarballs
+      copy: src=files/unarchive-tarballs.sh dest={{ lfsmount }}/customscripts/unarchive-tarballs.sh owner={{ lfsuser }} group={{ lfsgroup }} mode=0774
+      tags:
+        - unzip
+      
+    - name: Unarchive all tarballs in /source
+      sudo: yes
+      sudo_user: "{{ lfsuser }}"
+      command: "{{ lfsmount }}/customscripts/unarchive-tarballs.sh"
+      tags:
+        - unzip
 
