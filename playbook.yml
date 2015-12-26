@@ -249,7 +249,7 @@
     - name: Unarchive all tarballs in /source
       sudo: yes
       sudo_user: "{{ lfsuser }}"
-      command: "{{ lfsmount }}/customscripts/unarchive-tarballs.sh"
+      command: "{{ lfsmount }}/customscripts/unarchive-tarballs.sh {{ lfsmount }}/sources {{ lfsmount }}/sources "
       tags:
         - unzip
 
@@ -267,7 +267,9 @@
 #       - make install
 #       - ldconfig
 
-
-
+#    - name: parsing testing
+#      debug: msg="{{ tar_pkg | basename }}"
+#      tags:
+#        - testing
 
 
