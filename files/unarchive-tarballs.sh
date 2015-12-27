@@ -34,4 +34,9 @@ for tarfile in $src_dir/*.tar.*
    ($cmd_tar -xvf $tarfile -C $dest_dir)
 done
 
+for bzfile in $src_dir/*.bz2
+do
+  ($cmd_tar xvfj $bzfile -C $dest_dir)
+done
+
 
